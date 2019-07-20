@@ -68,12 +68,25 @@ def test_multiple_rounds():
     return result
 
 
+def test_pickle():
+    tourney = Tournament(
+        ['a', 'b'], SingleEliminationGenerator())
+    tourney.setScore(0, (1, 0), 0)
+
+    tourney.saveToFile('test.pkl')
+
+    tourney2 = Tournament.fromFile('test.pkl')
+    return set(tourney.getTeams()) == set(tourney2.getTeams()) \
+        and tourney2.roundCompleted()
+
+
 if __name__ == '__main__':
     tests = [
         test_tournament_init,
         test_record_past_rounds,
         test_round_completion,
         test_multiple_rounds,
+        test_pickle,
     ]
 
     for test in tests:

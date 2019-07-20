@@ -1,3 +1,5 @@
+import pickle
+
 from collections import OrderedDict
 
 
@@ -21,6 +23,15 @@ class Tournament(object):
         self.unplayed_games = set()
 
         self.startNextRound()
+
+    def saveToFile(self, filename):
+        pickle.dump(self, open(filename, 'wb'))
+
+    @staticmethod
+    def fromFile(filename):
+        # this had better be a real tournament or we've just imported arbitrary
+        # Python code
+        return pickle.load(open(filename, 'rb'))
 
     # will not verify that all games in past round were played
     def startNextRound(self):
