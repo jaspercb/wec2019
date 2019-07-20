@@ -9,6 +9,8 @@ def getGenerator(mode='single'):
         return DoubleEliminationGenerator()
     elif mode == 'roundrobin':
         return RoundRobinGenerator()
+    elif mode == 'swiss':
+        return SwissGenerator()
     else:
         raise ValueError(f'Tournament type {mode} not recognized')
 
@@ -164,6 +166,53 @@ class RoundRobinGenerator(object):
             teams[-1] = tmp
             self.rounds.append(curRound)
 
+class SwissGenerator(object):
+    def __init__(self):
+        self.rounds = [] # list of list of functions to get participants
+        self.roundNum = 0
+
+        self.teams = None
+        self.scores = defaultdict(int)
+        self.played = defaultdict(set)
+
+        self.previousRound = []
+
+    def generateRound(self, trn):
+        self.teams = trn.getTeams()
+        for g in self.previousRound:
+            self.scores[g.getWinner()] += 1
+        if 2**(self.roundNum) >= len(self.teams):
+            return None
+
+        t = [y for (x, y) in reversed(sorted([(self.scores[t], t) for t in self.teams]))]
+        games = []
+        assigned = set()
+        for team in t:
+            if team in assigned:
+                continue
+            assigned.add(team)
+            found = False
+            for team2 in t:
+                if team2 in assigned:
+                    continue
+                if team2 in self.played[team]:
+                    continue
+                games.append(Game(team, team2))
+                self.played[team].add(team2)
+                self.played[team2].add(team)
+                assigned.add(team2)
+                found = True
+                break
+            if not found:
+                # give bye
+                games.append(Game(team, None))
+        self.roundNum += 1
+        self.previousRound = games
+        return games
+
+    def getRanking(self):
+        return _getRanking(sorted([(v, k) for (k, v) in self.scores.items()]))
+
 def _generateSingleElimRound(prevRound):
     curRound = []
     for i in range(0, len(prevRound), 2):
@@ -244,7 +293,7 @@ if __name__ == '__main__':
     import tournament
     import sys
     import random
-    gen = getGenerator('roundrobin')
+    gen = getGenerator('swiss')
     t = tournament.Tournament([str(x) for x in range(0, int(sys.argv[1]))], gen)
     while True:
         games = gen.generateRound(t)

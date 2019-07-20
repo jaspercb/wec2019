@@ -116,13 +116,13 @@ class Interface():
 
         round_generator = None
         while round_generator is None:
-            msg = "Which bracket type? (double, single) "
+            msg = "Which bracket type? (double, single, roundrobin, swiss) "
             self.addstr(0, 0, msg)
             self.addstr(0, len(msg), " "*10)
             curses.echo()
             mode = str(self.stdscr.getstr(0, len(msg), 10))[2:-1]
             curses.noecho()
-            if mode in ["single", "double", "roundrobin"]:
+            if mode in ["single", "double", "roundrobin", "swiss"]:
                 round_generator = roundgen.getGenerator(mode)
                 break
 
