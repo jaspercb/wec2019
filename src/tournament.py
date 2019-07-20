@@ -13,8 +13,8 @@ class Tournament(object):
         # (games in a round may be played out of order)
         self.current_round = OrderedDict()
 
-        # will store games in order they were played
-        self.past_games = OrderedDict()
+        # will store past values of current_round
+        self.past_rounds = []
 
         # set of gameids representing unplayed games in the current round
         self.unplayed_games = set()
@@ -23,15 +23,19 @@ class Tournament(object):
 
     # will not verify that all games in past round were played
     def startNextRound(self):
+        if len(self.current_round) > 0:
+            self.past_rounds.append(self.current_round)
+
+        self.current_round = OrderedDict()
         for game in self.round_generator.generateGames(self):
             self.current_round[self.next_game_id] = game
             self.next_game_id += 1
 
         self.unplayed_games = set(self.currentGames())
 
-    # games in current round
-    def currentGames(self):
-        return self.current_round.keys()
+    # past rounds
+    def currentRound(self):
+        return list(self.current_round.keys())
 
     def getGame(self, gameid):
         if gameid in self.current_round.keys():
@@ -55,7 +59,7 @@ class Tournament(object):
         self.team_records[string]
 
     def getTeams(self):
-        return [name for name in self.team_records.keys()]
+        return list(self.team_records.keys())
 
     def getTeamHistory(self, team):
         return [game for game in self.games if team in game.getTeams()]
