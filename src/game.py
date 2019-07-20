@@ -1,20 +1,37 @@
 class Game(object):
     def __init__(self, team1=None, team2=None):
         self.teams = (team1, team2)
-        self.score = (0, 0)
+
+        self.scores = [None]
+        self.wins = [0, 0]
+
+    def setScore(self, score, match=0):
+        self.scores[match] = score
+
+        self.wins = [sum(1 for score in self.scores
+                         if score is not None and score[0] > score[1]),
+                     sum(1 for score in self.scores
+                         if score is not None and score[1] > score[0])]
+
+    def getScores(self):
+        return self.scores
 
     def getTeams(self):
         return self.teams
 
+    # assumes isComplete()
     def getWinner(self):
         if self.isBye():
             return self.teams[0]
-        return max(zip(self.score, self.teams))[1]
 
+        return max(zip(self.wins, self.teams))[1]
+
+    # assumes isComplete()
     def getLoser(self):
         if self.isBye():
             return None
-        return min(zip(self.score, self.teams))[1]
+
+        return min(zip(self.wins, self.teams))[1]
 
     def getOpponent(self, team):
         return self.teams[0] if team != self.teams[0] else self.teams[1]
@@ -23,7 +40,10 @@ class Game(object):
         return self.teams[1] is None
 
     def isNull(self):
-        return self.teams[0] == None and self.teams[1] == None
+        return self.teams[0] is None and self.teams[1] is None
+
+    def isComplete(self):
+        return max(self.wins) >= (len(self.scores) + 1) / 2
 
     def __repr__(self):
-        return f'teams: {self.teams}, score: {self.score}'
+        return f'teams: {self.teams}, score: {self.scores}'

@@ -2,9 +2,10 @@ from collections import OrderedDict
 
 
 class Tournament(object):
-    def __init__(self, teams, round_generator):
+    def __init__(self, teams, round_generator, num_matches=1):
         self.round_generator = round_generator
         self.next_game_id = 0
+        self.num_matches = num_matches
 
         # win/loss record for each team, ordered by original seed
         self.team_records = OrderedDict([(team, (0, 0)) for team in teams])
@@ -28,6 +29,8 @@ class Tournament(object):
 
         self.current_round = OrderedDict()
         for game in self.round_generator.generateRound(self):
+            # set game scores to the correct number of unplayed matches
+            game.scores = [None] * self.num_matches
             self.current_round[self.next_game_id] = game
             self.next_game_id += 1
 
@@ -54,16 +57,17 @@ class Tournament(object):
     # |score| is a tuple (team1_score, team2_score)
     # will only update games in current round, but can change
     # score of a previously played game in the round
-    def setScore(self, gameid, score):
+    def setScore(self, gameid, score, match=0):
         if gameid not in self.current_round:
             raise KeyError()
 
-        self.current_round[gameid].score = score
+        self.current_round[gameid].setScore(score, match)
 
-        try:
-            self.unplayed_games.remove(gameid)
-        except KeyError:
-            pass
+        if self.current_round[gameid].isComplete():
+            try:
+                self.unplayed_games.remove(gameid)
+            except KeyError:
+                pass
 
     def getTeamRecord(self, string):
         self.team_records[string]

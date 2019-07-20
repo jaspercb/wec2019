@@ -52,11 +52,28 @@ def test_round_completion():
     return result
 
 
+def test_multiple_rounds():
+    result = True
+
+    tourney = Tournament(
+        ['a', 'b'], SingleEliminationGenerator(), num_matches=3)
+    tourney.setScore(0, (1, 0), 0)
+
+    result = result and not tourney.roundCompleted()
+
+    tourney.setScore(0, (1, 0), 1)
+
+    result = result and tourney.roundCompleted()
+
+    return result
+
+
 if __name__ == '__main__':
     tests = [
         test_tournament_init,
         test_record_past_rounds,
         test_round_completion,
+        test_multiple_rounds,
     ]
 
     for test in tests:
