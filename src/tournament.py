@@ -22,6 +22,8 @@ class Tournament(object):
         # set of gameids representing unplayed games in the current round
         self.unplayed_games = set()
 
+        self.rankings = None
+
         self.startNextRound()
 
     def saveToFile(self, filename):
@@ -39,17 +41,20 @@ class Tournament(object):
             self.past_rounds.append(self.current_round)
 
         self.current_round = OrderedDict()
-        nextRound = self.round_generator.generateRound(self)
-        if nextRound:
-            for game in nextRound:
-                # set game scores to the correct number of unplayed matches
-                game.scores = [None] * self.num_matches
-                self.current_round[self.next_game_id] = game
-                self.next_game_id += 1
+        games = self.round_generator.generateRound(self)
+        if not games:
+            # tournament is complete
+            self.rankings = self.round_generator.getRanking()
+            return
+        for game in games:
+            # set game scores to the correct number of unplayed matches
+            game.scores = [None] * self.num_matches
+            self.current_round[self.next_game_id] = game
+            self.next_game_id += 1
 
-            self.unplayed_games = set(
-                id_ for id_, game in self.current_round.items()
-                if not game.isBye())
+        self.unplayed_games = set(
+            id_ for id_, game in self.current_round.items()
+            if not game.isBye())
 
     def currentRound(self):
         return list(self.current_round.keys())
@@ -59,6 +64,12 @@ class Tournament(object):
 
     def roundCompleted(self):
         return len(self.unplayed_games) == 0
+
+    def isComplete(self):
+        return self.rankings != None
+
+    def getRanking(self):
+        return self.rankings
 
     def getGame(self, gameid):
         if gameid in self.current_round.keys():

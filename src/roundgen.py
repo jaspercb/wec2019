@@ -15,7 +15,6 @@ def getGenerator(mode='single'):
 class SingleEliminationGenerator(object):
     def __init__(self):
         self.rounds = [] # list of list of functions to get participants
-        self.winner = lambda: None
         self.roundNum = 0
 
         self.previousRound = []

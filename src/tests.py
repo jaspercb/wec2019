@@ -67,6 +67,19 @@ def test_multiple_rounds():
 
     return result
 
+def test_complete():
+    result = True
+
+    tourney = Tournament(
+        ['a', 'b'], SingleEliminationGenerator(), num_matches=1)
+
+    tourney.setScore(0, (1, 0), 0)
+
+    tourney.startNextRound()
+    result = result and tourney.isComplete()
+    rankings = tourney.getRanking()
+    result = result and rankings[0] == (1, 'a')
+    result = result and rankings[0] == (2, 'b')
 
 def test_pickle():
     tourney = Tournament(
