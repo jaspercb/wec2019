@@ -82,8 +82,10 @@ def viewRound(stdscr, tourny):
         if index == y:
             stdscr.standend()
 
-    DISPLAY_LENGTH = 10
+    
     SCORE_LENGTH = 7
+    DISPLAY_LENGTH = max(map(len, tourny.getTeams())) + 3
+
     def redrawScreen():
         game_ids = tourny.currentRound()
         for i, game_id in enumerate(game_ids):
@@ -94,12 +96,11 @@ def viewRound(stdscr, tourny):
             except: # TODO: this is for testing only, remove once stub exists
                 score = (1, 2)
             line = ""
-            line += t1[:DISPLAY_LENGTH].rjust(DISPLAY_LENGTH)
-            line += "-".join(map(str, score)).rjust(SCORE_LENGTH)
-            line += t2[:DISPLAY_LENGTH].rjust(DISPLAY_LENGTH)
+            line += t1[:DISPLAY_LENGTH].ljust(DISPLAY_LENGTH)
+            line += "-".join(map(str, score)).ljust(SCORE_LENGTH)
+            line += t2[:DISPLAY_LENGTH].ljust(DISPLAY_LENGTH)
             drawMaybeHighlightedLine(i, line)
-        # TODO: maybe a button with "finish round"
-        stdscr.addstr(i+2, 0, "FINISH ROUND")
+        drawMaybeHighlightedLine(len(game_ids), "FINISH ROUND")
 
     while True:
         redrawScreen()
@@ -108,9 +109,9 @@ def viewRound(stdscr, tourny):
         if ch == 10 and index == len(game_ids): # finish round
             break
 
-        if ch == curses.KEY_DOWN:
+        if ch == curses.KEY_DOWN or ch == ord("j"):
             index += 1
-        elif ch == curses.KEY_UP:
+        elif ch == curses.KEY_UP or ch == ord("k"):
             index -= 1
         elif ch == curses.KEY_LEFT and index < len(game_ids):
             tourny.setScore(game_ids[index], (1, 0))
@@ -118,9 +119,12 @@ def viewRound(stdscr, tourny):
             tourny.setScore(game_ids[index], (0, 1))
         elif ch == 10: # enter
             while True:
+                stdscr.standout()
+                newscore = stdscr.addstr(index, DISPLAY_LENGTH, " "*SCORE_LENGTH) # y, x, length-of-string
                 curses.echo()
-                newscore = stdscr.getstr(index, DISPLAY_LENGTH + 1, 10) # y, x, length-of-string
+                newscore = stdscr.getstr(index, DISPLAY_LENGTH, 10) # y, x, length-of-string
                 curses.noecho()
+                stdscr.standend()
                 try:
                     arr = newscore.split(b" ")
                     if len(arr) == 1:
@@ -131,8 +135,6 @@ def viewRound(stdscr, tourny):
                 except ValueError:
                     pass # THERE IS NO ESCAPE
 
-
-                
         index = max(index, 0)
         index = min(index, len(tourny.currentRound()))
 
