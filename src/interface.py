@@ -44,13 +44,13 @@ class Interface():
 
     def addstr(self, y, x, string, formatting=0):
         # if offscreen, do not render
-        y = y - self.scroll
-        if y < 0:
+        yi = y - self.scroll
+        if yi < 0:
             return
         maxy, maxx = self.stdscr.getmaxyx()
-        if y >= maxy:
+        if yi >= maxy:
             return
-        self.stdscr.addstr(y - self.scroll, x, string, formatting)
+        self.stdscr.addstr(yi, x, string, formatting)
 
     def drawMaybeHighlightedLine(self, highlighted_index, y, string, formatting=0):
         if highlighted_index == y:
@@ -156,6 +156,7 @@ class Interface():
 
         Neat possible feature: Filter games by team name
         """
+        self.scroll = 0
         selected_index = 0
         tourny = self.tournament
 
@@ -211,8 +212,12 @@ class Interface():
 
             if ch == curses.KEY_DOWN or ch == ord("j"):
                 selected_index += 1
+                if selected_index - self.scroll > 10:
+                    self.scroll += 1
             elif ch == curses.KEY_UP or ch == ord("k"):
                 selected_index -= 1
+                if selected_index - self.scroll < 0:
+                    self.scroll -= 1
             elif ch == curses.KEY_LEFT and selected_index < len(backmap):
                 game_id, n = backmap[selected_index]
                 tourny.setScore(game_id, (1, 0), n)
@@ -239,7 +244,7 @@ class Interface():
             elif ch == ord("s"):
                 # save
                 if self.saveDialog(tourny):
-                    return
+                    raise ExitInProgressTournament()
 
             elif ch == ord("q"):
                 # exit
@@ -253,9 +258,10 @@ class Interface():
         self.stdscr.clear()
         filename = ""
         while filename == "":
-            self.addstr(0, 0, "Enter save file name:")
+            msg = "Enter save file name: "
+            self.addstr(0, 0, msg)
             curses.echo()
-            filename = self.stdscr.getstr(1, 0, 20)
+            filename = self.stdscr.getstr(0, len(msg), 20)
             curses.noecho()
         tourny.saveToFile(filename)
         return True
