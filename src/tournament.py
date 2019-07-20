@@ -37,6 +37,9 @@ class Tournament(object):
     def currentRound(self):
         return list(self.current_round.keys())
 
+    def pastRounds(self):
+        return [list(round_.keys()) for round_ in self.past_rounds]
+
     def getGame(self, gameid):
         if gameid in self.current_round.keys():
             return self.current_round[gameid]
