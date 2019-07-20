@@ -25,7 +25,9 @@ class ExitInProgressTournament(Exception):
 class Interface():
     def __init__(self, stdscr, tournament = None):
         self.stdscr = stdscr
+        self.stdscr.scrollok(True)
         self.tournament = tournament
+        self.scroll = 0
 
     def run(self):
         if self.tournament is None:
@@ -40,11 +42,21 @@ class Interface():
         except ExitInProgressTournament:
             pass
 
+    def addstr(self, y, x, string, formatting=0):
+        # if offscreen, do not render
+        y = y - self.scroll
+        if y < 0:
+            return
+        maxy, maxx = self.stdscr.getmaxyx()
+        if y >= maxy:
+            return
+        self.stdscr.addstr(y - self.scroll, x, string, formatting)
+
     def drawMaybeHighlightedLine(self, highlighted_index, y, string, formatting=0):
         if highlighted_index == y:
             formatting = formatting | curses.A_REVERSE
 
-        self.stdscr.addstr(y, 0, string, formatting)
+        self.addstr(y, 0, string, formatting)
 
     def createTournament(self):
         """
@@ -81,8 +93,8 @@ class Interface():
                     line = "Start typing a team name"
                 elif howManyTeams() <= 1:
                     line = "Start typing another team name"
-                self.stdscr.addstr(j, 3, line, formatting)
-                self.stdscr.addstr(j, 0, "", formatting)
+                self.addstr(j, 3, line, formatting)
+                self.addstr(j, 0, "", formatting)
 
         while True:
             redrawScreen()
@@ -105,8 +117,8 @@ class Interface():
         round_generator = None
         while round_generator is None:
             msg = "Which bracket type? (double, single) "
-            self.stdscr.addstr(0, 0, msg)
-            self.stdscr.addstr(0, len(msg), " "*10)
+            self.addstr(0, 0, msg)
+            self.addstr(0, len(msg), " "*10)
             curses.echo()
             mode = str(self.stdscr.getstr(0, len(msg), 10))[2:-1]
             curses.noecho()
@@ -117,8 +129,8 @@ class Interface():
         bestofn = None
         while bestofn is None:
             msg = "Matches per game (odd number): "
-            self.stdscr.addstr(1, 0, msg)
-            self.stdscr.addstr(1, len(msg), " "*3)
+            self.addstr(1, 0, msg)
+            self.addstr(1, len(msg), " "*3)
 
             try:
                 curses.echo()
@@ -129,6 +141,7 @@ class Interface():
             except ValueError:
                 pass
 
+        teamNames = [str(i) for i in range(1000)]
         tourny = Tournament(teamNames[:-1], round_generator, bestofn)
 
         return tourny
@@ -170,7 +183,7 @@ class Interface():
                 t1, t2 = game.getTeams()
                 score = game.scores[n] # (int, int)
                 line = ""
-                if n == 0:
+                if n == 0 and t1:
                     line += t1[:DISPLAY_LENGTH].ljust(DISPLAY_LENGTH)
                 else:
                     line += " " * DISPLAY_LENGTH
@@ -178,14 +191,14 @@ class Interface():
                     line += "-".join(map(str, score)).ljust(SCORE_LENGTH)
                 else:
                     line += "".ljust(SCORE_LENGTH)
-                if n == 0:
+                if n == 0 and t2:
                     line += t2[:DISPLAY_LENGTH].ljust(DISPLAY_LENGTH)
                 else:
                     line += " " * DISPLAY_LENGTH
                 formatting = curses.A_BOLD if game.isComplete() else 0
                 self.drawMaybeHighlightedLine(selected_index, row, line, formatting)
             self.drawMaybeHighlightedLine(selected_index, len(backmap), "FINISH ROUND", curses.A_BOLD if tourny.roundCompleted() else 0)
-            self.stdscr.addstr(len(backmap)+1, 0, "'s' to save, 'q' to quit")
+            self.addstr(len(backmap)+1, 0, "'s' to save, 'q' to quit")
 
         while True:
             redrawScreen()
@@ -209,7 +222,7 @@ class Interface():
             elif ch == 10 and selected_index < len(backmap): # enter
                 while True:
                     self.stdscr.standout()
-                    newscore = self.stdscr.addstr(selected_index, DISPLAY_LENGTH, " "*SCORE_LENGTH)
+                    newscore = self.addstr(selected_index, DISPLAY_LENGTH, " "*SCORE_LENGTH)
                     curses.echo()
                     newscore = self.stdscr.getstr(selected_index, DISPLAY_LENGTH, 10)
                     curses.noecho()
@@ -240,7 +253,7 @@ class Interface():
         self.stdscr.clear()
         filename = ""
         while filename == "":
-            self.stdscr.addstr(0, 0, "Enter save file name:")
+            self.addstr(0, 0, "Enter save file name:")
             curses.echo()
             filename = self.stdscr.getstr(1, 0, 20)
             curses.noecho()
