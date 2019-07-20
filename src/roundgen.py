@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from game import Game
 
 def getGenerator(mode='single'):
@@ -16,10 +18,20 @@ class SingleEliminationGenerator(object):
         self.winner = lambda: None
         self.roundNum = 0
 
+        self.previousRound = []
+        self.eliminated = []
+
     def generateRound(self, trn):
         if self.roundNum == 0:
             self._createRounds(trn)
+
+        
+        for g in self.previousRound:
+            if g.getLoser():
+                self.eliminated.append((self.roundNum, g.getLoser()))
         if self.roundNum >= len(self.rounds):
+            self.eliminated.append((self.roundNum+1,
+                self.rounds[-1][0][0].getWinner()))
             return None
         games = []
         for game, f1, f2 in self.rounds[self.roundNum]:
@@ -27,40 +39,52 @@ class SingleEliminationGenerator(object):
             if not game.isNull():
                 games.append(game)
         self.roundNum += 1
+        self.previousRound = games
+
         return games
 
-    def getWinner(self):
-        return self.winner()
+    def getRanking(self):
+        return _getRanking(self.eliminated)
 
     def _createRounds(self, trn):
         teams = trn.getTeams()
 
         self.rounds = _generateSingleElimBracket(teams)
-        self.winner = self.rounds[-1][0][0].getWinner
 
 
 class DoubleEliminationGenerator(object):
     def __init__(self):
         self.rounds = [] # list of list of functions to get participants
         self.lastFinal = None
-        self.winner = lambda: None
         self.roundNum = 0
+
+        self.previousRound = []
+        self.eliminated = []
+        self.losses = defaultdict(int)
 
     def generateRound(self, trn):
         if self.roundNum == 0:
             self._createRounds(trn)
         while True:
+            for g in self.previousRound:
+                l = g.getLoser()
+                if l:
+                    self.losses[l] += 1
+                    if self.losses[l] == 2:
+                        self.eliminated.append((self.roundNum, g.getLoser()))
+
             if self.roundNum == len(self.rounds):
                 lastGame = self.rounds[-1][0][0]
                 if lastGame.getWinner() == lastGame.teams[0]:
-                    self.winner = lastGame.getWinner
+                    self.eliminated.append((self.roundNum + 1, lastGame.getWinner()))
                     return None
                 else:
                     self.lastFinal = Game(lastGame.teams[0], lastGame.teams[1])
                     self.roundNum += 1
-                    return [self.lastFinal]
+                    self.previousRound = [self.lastFinal]
+                    return self.previousRound
             elif self.roundNum == len(self.rounds) + 1:
-                self.winner = self.lastFinal.getWinner
+                self.eliminated.append((self.roundNum + 1, self.lastFinal.getWinner()))
                 return None
 
             games = []
@@ -70,10 +94,11 @@ class DoubleEliminationGenerator(object):
                     games.append(game)
             self.roundNum += 1
             if games:
+                self.previousRound = games
                 return games
 
-    def getWinner(self):
-        return self.winner()
+    def getRanking(self):
+        return _getRanking(self.eliminated)
 
     def _createRounds(self, trn):
         teams = trn.getTeams()
@@ -116,8 +141,12 @@ class RoundRobinGenerator(object):
         self.roundNum += 1
         return self.rounds[self.roundNum-1]
 
-    def getWinner(self):
-        return NotImplementedError()
+    def getRanking(self):
+        wins = defaultdict(int)
+        for r in self.rounds:
+            for g in r:
+                wins[g.getWinner()] += 1
+        return _getRanking(sorted([(v, k) for (k, v) in wins.items()]))
 
     def _createRounds(self, trn):
         teams = trn.getTeams()
@@ -200,10 +229,22 @@ def _generateSeededOrdering(size):
         prevRound = [x for i in prevRound for x in (i, roundSize-1-i)]
     return prevRound
 
+def _getRanking(eliminated):
+    pplace = 0
+    pround = 1 << 64
+    placements = []
+    for i, (r, t) in enumerate(reversed(eliminated)):
+        if r < pround:
+            pround = r
+            pplace = i+1
+        placements.append((pplace, t))
+    return placements
+
 if __name__ == '__main__':
     # FIXME: remove
     import tournament
     import sys
+    import random
     gen = getGenerator('roundrobin')
     t = tournament.Tournament([str(x) for x in range(0, int(sys.argv[1]))], gen)
     while True:
@@ -212,5 +253,7 @@ if __name__ == '__main__':
             break
         print(f'Round {gen.roundNum}')
         for g in games:
+            v = random.randint(0, 1)
+            g.setScore((v, 1-v))
             print(g)
-    print(gen.getWinner())
+    print('\n'.join(map(str, gen.getRanking())))
