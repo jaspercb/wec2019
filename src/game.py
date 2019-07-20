@@ -22,5 +22,8 @@ class Game(object):
     def isBye(self):
         return self.teams[1] == None
 
+    def isNull(self):
+        return self.teams[0] == None and self.teams[1] == None
+
     def __repr__(self):
         return f'teams: {self.teams}, score: {self.score}'
