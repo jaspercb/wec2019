@@ -13,6 +13,13 @@ States:
     * Displays currently active games
     * Arrow keys to select a game, left-right to mark a winner? (for no game scores)
     * Enter on a game: input Score1-Score2
+
+Required TODOs:
+    * scrolling behavior?
+    * pick single-elim vs double-elim etc
+
+Neat TODOs:
+    * Display bracket?
 """
 
 class ExitInProgressTournament(Exception):
@@ -30,6 +37,7 @@ class Interface():
             while True: # while not complete
                 self.viewRound()
                 self.tournament.startNextRound()
+            # TODO: Handle it being done
         except ExitInProgressTournament:
             pass
 
@@ -52,22 +60,35 @@ class Interface():
 
         def noDuplicateTeams():
             return len(set(teamNames)) == len(teamNames)
+
+        def howManyTeams():
+            return len([name for name in teamNames if len(name)])
+
+        def canCreateTournament():
+            return noDuplicateTeams() and howManyTeams() >= 2
+
         def redrawScreen():
             for j, name in enumerate(teamNames):
-                self.drawMaybeHighlightedLine(i, j+1, name)
+                self.drawMaybeHighlightedLine(i, j, name, curses.A_BOLD)
             if teamNames[i] == "":
-                if noDuplicateTeams():
-                    self.stdscr.addstr(j+1, 1, "Input a team name or press ENTER to create tournament")
-                else:
-                    self.stdscr.addstr(j+1, 1, "Please change duplicate team name")
+                line = ""
+                formatting = 0
+                if canCreateTournament():
+                    line = "Start typing another team name or press ENTER to create tournament"
+                    formatting = curses.A_BOLD
+                elif not noDuplicateTeams():
+                    line = "Please change duplicate team name"
+                elif howManyTeams() <= 1:
+                    line = "Start typing another team name"
+                self.stdscr.addstr(j, 3, line, formatting)
 
         while True:
+            redrawScreen()
             ch = self.stdscr.getch()
             self.stdscr.clear()
-            self.stdscr.addstr(10, 10, str(ch))
             if (ch == 10 or ch == curses.KEY_DOWN): # newline/enter
                 # if previous team is null, we're done entering
-                if teamNames[i] == "" and noDuplicateTeams():
+                if teamNames[i] == "" and canCreateTournament():
                     break
                 i += 1
                 if len(teamNames) <= i:
@@ -78,17 +99,23 @@ class Interface():
                 teamNames[i] = teamNames[i][:-1] if teamNames[i] else ""
             else:
                 teamNames[i] += chr(ch)
-            redrawScreen()
+        
+        bestofn = None
+        while bestofn is None:
+            msg = "Best-of-n: "
+            self.stdscr.addstr(0, 0, msg)
+            self.stdscr.addstr(0, len(msg), " "*3)
+            try:
+                curses.echo()
+                bestofn = int(self.stdscr.getstr(0, len(msg), 3))
+                curses.noecho()
+            except ValueError:
+                pass
 
-        tourny = Tournament(teamNames, DummyRoundGenerator())
+        # TODO: pass in n
+        tourny = Tournament(teamNames[:-1], DummyRoundGenerator(), bestofn)
+        
         return tourny
-
-    def viewTournament(stdscr):
-        """
-        Controls:
-            asdf
-        """
-        pass
 
     def viewRound(self):
         """
@@ -106,29 +133,49 @@ class Interface():
         SCORE_LENGTH = 7
         DISPLAY_LENGTH = max(map(len, tourny.getTeams())) + 3
 
+        backmap = {}
+        # map from row -> (game_id, nth game)
+        def updateBackmap():
+            backmap.clear()
+            row = 0
+            for game_id in tourny.currentRound():
+                game = tourny.getGame(game_id)
+                lim = game.gamesPlayed() + game.minimumGamesLeft()
+                for i, score in enumerate(game.scores[:lim]):
+                    backmap[row] = (game_id, i)
+                    row += 1
+
         def redrawScreen():
-            game_ids = tourny.currentRound()
-            for i, game_id in enumerate(game_ids):
+            updateBackmap()
+            self.stdscr.clear()
+            for row in backmap:
+                game_id, n = backmap[row]
                 game = tourny.getGame(game_id)
                 t1, t2 = game.getTeams()
-                score = game.score # (int, int)
+                score = game.scores[n] # (int, int)
                 line = ""
-                line += t1[:DISPLAY_LENGTH].ljust(DISPLAY_LENGTH)
+                if n == 0:
+                    line += t1[:DISPLAY_LENGTH].ljust(DISPLAY_LENGTH)
+                else:
+                    line += " " * DISPLAY_LENGTH
                 if score:
                     line += "-".join(map(str, score)).ljust(SCORE_LENGTH)
                 else:
                     line += "".ljust(SCORE_LENGTH)
-                line += t2[:DISPLAY_LENGTH].ljust(DISPLAY_LENGTH)
+                if n == 0:
+                    line += t2[:DISPLAY_LENGTH].ljust(DISPLAY_LENGTH)
+                else:
+                    line += " " * DISPLAY_LENGTH
                 formatting = curses.A_BOLD if score is not None else 0
-                self.drawMaybeHighlightedLine(selected_index, i, line, formatting)
-            self.drawMaybeHighlightedLine(selected_index, len(game_ids), "FINISH ROUND", curses.A_BOLD if tourny.roundCompleted() else 0)
+                self.drawMaybeHighlightedLine(selected_index, row, line, formatting)
+            self.drawMaybeHighlightedLine(selected_index, len(backmap), "FINISH ROUND", curses.A_BOLD if tourny.roundCompleted() else 0)
 
         while True:
             redrawScreen()
             game_ids = tourny.currentRound()
             ch = self.stdscr.getch()
 
-            if ch == 10 and selected_index == len(game_ids) and tourny.roundCompleted():
+            if ch == 10 and selected_index == len(backmap) and tourny.roundCompleted():
                 # Finish round
                 break
 
@@ -136,11 +183,13 @@ class Interface():
                 selected_index += 1
             elif ch == curses.KEY_UP or ch == ord("k"):
                 selected_index -= 1
-            elif ch == curses.KEY_LEFT and selected_index < len(game_ids):
-                tourny.setScore(game_ids[selected_index], (1, 0))
-            elif ch == curses.KEY_RIGHT and selected_index < len(game_ids):
-                tourny.setScore(game_ids[selected_index], (0, 1))
-            elif ch == 10 and selected_index < len(game_ids): # enter
+            elif ch == curses.KEY_LEFT and selected_index < len(backmap):
+                game_id, n = backmap[selected_index]
+                tourny.setScore(game_id, (1, 0), n)
+            elif ch == curses.KEY_RIGHT and selected_index < len(backmap):
+                game_id, n = backmap[selected_index]
+                tourny.setScore(game_id, (0, 1), n)
+            elif ch == 10 and selected_index < len(backmap): # enter
                 while True:
                     self.stdscr.standout()
                     newscore = self.stdscr.addstr(selected_index, DISPLAY_LENGTH, " "*SCORE_LENGTH)
@@ -164,14 +213,16 @@ class Interface():
 
 
             selected_index = max(selected_index, 0)
-            selected_index = min(selected_index, len(tourny.currentRound()))
+            selected_index = min(selected_index, len(backmap))
 
     def saveDialog(self):
         self.stdscr.clear()
         filename = ""
         while filename != "":
             self.stdscr.addstr(0, 0, "Enter save file name:")
+            curses.echo()
             filename = self.stdscr.getstr(1, 0, 20)
+            curses.noecho()
         # TODO: save to filename
 
 def main(stdscr):

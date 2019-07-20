@@ -43,7 +43,13 @@ class Game(object):
         return self.teams[0] is None and self.teams[1] is None
 
     def isComplete(self):
-        return max(self.wins) >= (len(self.scores) + 1) / 2
+        return self.minimumGamesLeft() == 0
+    
+    def gamesPlayed(self):
+        return sum(self.wins)
+
+    def minimumGamesLeft(self):
+        return int((len(self.scores) + 1) / 2) - max(self.wins)
 
     def __repr__(self):
         return f'teams: {self.teams}, score: {self.scores}'
