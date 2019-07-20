@@ -27,7 +27,7 @@ class Tournament(object):
             self.past_rounds.append(self.current_round)
 
         self.current_round = OrderedDict()
-        for game in self.round_generator.generateGames(self):
+        for game in self.round_generator.generateRound(self):
             self.current_round[self.next_game_id] = game
             self.next_game_id += 1
 
@@ -48,15 +48,18 @@ class Tournament(object):
         raise KeyError()
 
     # |score| is a tuple (team1_score, team2_score)
+    # will only update games in current round, but can change
+    # score of a previously played game in the round
     def setScore(self, gameid, score):
+        if gameid not in self.current_round:
+            raise KeyError()
+
         self.current_round[gameid].score = score
 
         try:
             self.unplayed_games.remove(gameid)
         except KeyError:
             pass
-        else:
-            self.past_rounds.append(gameid)
 
     def getTeamRecord(self, string):
         self.team_records[string]

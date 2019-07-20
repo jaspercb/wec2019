@@ -6,7 +6,7 @@ class DummyRoundGenerator(object):
     def __init__(self):
         pass
 
-    def generateGames(self, tournament):
+    def generateRound(self, tournament):
         teams = tournament.getTeams()
         if len(teams) < 2:
             return []
