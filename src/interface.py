@@ -36,9 +36,9 @@ class Interface():
             while True: # while not complete
                 self.viewRound()
                 self.tournament.startNextRound()
-                if self.tournament.currentRound() is None:
+                if self.tournament.isComplete():
                     break
-            # TODO: print results
+            self.viewResults(self.tournament)
         except ExitInProgressTournament:
             pass
 
@@ -141,7 +141,6 @@ class Interface():
             except ValueError:
                 pass
 
-        teamNames = [str(i) for i in range(1000)]
         tourny = Tournament(teamNames[:-1], round_generator, bestofn)
 
         return tourny
@@ -199,7 +198,7 @@ class Interface():
                 formatting = curses.A_BOLD if game.isComplete() else 0
                 self.drawMaybeHighlightedLine(selected_index, row, line, formatting)
             self.drawMaybeHighlightedLine(selected_index, len(backmap), "FINISH ROUND", curses.A_BOLD if tourny.roundCompleted() else 0)
-            self.addstr(len(backmap)+1, 0, "'s' to save, 'q' to quit")
+            self.addstr(len(backmap)+1, 0, "'s' to save + quit, 'q' to quit without saving")
 
         while True:
             redrawScreen()
@@ -253,6 +252,19 @@ class Interface():
 
             selected_index = max(selected_index, 0)
             selected_index = min(selected_index, len(backmap))
+
+    def viewResults(self, tourny):
+        self.stdscr.clear()
+
+        for i, result in enumerate(tourny.getRanking()):
+            self.stdscr.addstr(i, 0, str(result[0]) + ". " + result[1])
+
+        self.stdscr.addstr(len(tourny.getRanking()), 0, "'q' to quit")
+
+        while True:
+            ch = self.stdscr.getch()
+            if ch == ord("q"):
+                raise ExitInProgressTournament()
 
     def saveDialog(self, tourny):
         self.stdscr.clear()
