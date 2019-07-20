@@ -5,6 +5,8 @@ def getGenerator(mode='single'):
         return SingleEliminationGenerator()
     elif mode == 'double':
         return DoubleEliminationGenerator()
+    elif mode == 'roundrobin':
+        return RoundRobinGenerator()
     else:
         raise ValueError(f'Tournament type {mode} not recognized')
 
@@ -100,6 +102,40 @@ class DoubleEliminationGenerator(object):
 
         self.rounds.append([(Game(), wwinner, lwinner)])
 
+class RoundRobinGenerator(object):
+    def __init__(self):
+        self.rounds = [] # list of list of functions to get participants
+        self.roundNum = 0
+
+    def generateRound(self, trn):
+        if self.roundNum == 0:
+            self._createRounds(trn)
+
+        if self.roundNum >= len(self.rounds):
+            return None
+        self.roundNum += 1
+        return self.rounds[self.roundNum-1]
+
+    def getWinner(self):
+        return NotImplementedError()
+
+    def _createRounds(self, trn):
+        teams = trn.getTeams()
+
+        if len(teams) % 2 == 1:
+            teams.append(None)
+        numRounds = len(teams)-1
+        self.rounds = []
+        for i in range(numRounds):
+            curRound = []
+            for j in range(0, len(teams)//2):
+                curRound.append(Game(teams[j], teams[-1-j]))
+            tmp = teams[1]
+            for j in range(1, len(teams)-1):
+                teams[j] = teams[j+1]
+            teams[-1] = tmp
+            self.rounds.append(curRound)
+
 def _generateSingleElimRound(prevRound):
     curRound = []
     for i in range(0, len(prevRound), 2):
@@ -168,7 +204,7 @@ if __name__ == '__main__':
     # FIXME: remove
     import tournament
     import sys
-    gen = getGenerator('double')
+    gen = getGenerator('roundrobin')
     t = tournament.Tournament([str(x) for x in range(0, int(sys.argv[1]))], gen)
     while True:
         games = gen.generateRound(t)
@@ -176,6 +212,5 @@ if __name__ == '__main__':
             break
         print(f'Round {gen.roundNum}')
         for g in games:
-            g.score = (0, 1)
             print(g)
     print(gen.getWinner())

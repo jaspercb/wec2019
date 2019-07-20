@@ -22,7 +22,7 @@ class Game(object):
     # assumes isComplete()
     def getWinner(self):
         if self.isBye():
-            return self.teams[0]
+            return self.teams[0] if self.teams[0] else self.teams[1]
 
         return max(zip(self.wins, self.teams))[1]
 
@@ -37,7 +37,7 @@ class Game(object):
         return self.teams[0] if team != self.teams[0] else self.teams[1]
 
     def isBye(self):
-        return self.teams[1] is None
+        return None in self.teams
 
     def isNull(self):
         return self.teams[0] is None and self.teams[1] is None
