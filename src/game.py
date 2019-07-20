@@ -43,7 +43,7 @@ class Game(object):
         return self.teams[0] is None and self.teams[1] is None
 
     def isComplete(self):
-        return self.minimumGamesLeft() == 0
+        return self.minimumGamesLeft() <= 0
     
     def gamesPlayed(self):
         return sum(self.wins)

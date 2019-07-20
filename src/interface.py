@@ -2,6 +2,7 @@ import sys
 import curses
 import curses.ascii
 
+import roundgen
 from tournament import Tournament
 from tests import DummyRoundGenerator
 
@@ -37,9 +38,13 @@ class Interface():
             while True: # while not complete
                 self.viewRound()
                 self.tournament.startNextRound()
-            # TODO: Handle it being done
+                if self.tournament.currentRound() is None:
+                    break
         except ExitInProgressTournament:
             pass
+
+        # TODO: Print results
+
 
     def drawMaybeHighlightedLine(self, highlighted_index, y, string, formatting=0):
         if highlighted_index == y:
@@ -78,9 +83,12 @@ class Interface():
                     formatting = curses.A_BOLD
                 elif not noDuplicateTeams():
                     line = "Please change duplicate team name"
+                elif howManyTeams() == 0:
+                    line = "Start typing a team name"
                 elif howManyTeams() <= 1:
                     line = "Start typing another team name"
                 self.stdscr.addstr(j, 3, line, formatting)
+                self.stdscr.addstr(j, 0, "", formatting)
 
         while True:
             redrawScreen()
@@ -100,20 +108,35 @@ class Interface():
             else:
                 teamNames[i] += chr(ch)
         
+        round_generator = None
+        while round_generator is None:
+            msg = "Which bracket type? (double, single) "
+            self.stdscr.addstr(0, 0, msg)
+            self.stdscr.addstr(0, len(msg), " "*10)
+            curses.echo()
+            mode = str(self.stdscr.getstr(0, len(msg), 10))[2:-1]
+            curses.noecho()
+            self.stdscr.addstr(3, 0, mode)
+            if mode in ["single", "double"]:
+                round_generator = roundgen.getGenerator(mode)
+                break
+
         bestofn = None
         while bestofn is None:
-            msg = "Best-of-n: "
-            self.stdscr.addstr(0, 0, msg)
-            self.stdscr.addstr(0, len(msg), " "*3)
+            msg = "Best-of-n (odd number): "
+            self.stdscr.addstr(1, 0, msg)
+            self.stdscr.addstr(1, len(msg), " "*3)
             try:
                 curses.echo()
-                bestofn = int(self.stdscr.getstr(0, len(msg), 3))
+                bestofn = int(self.stdscr.getstr(1, len(msg), 3))
                 curses.noecho()
+                if bestofn % 2 == 0:
+                    bestofn = None
             except ValueError:
                 pass
 
         # TODO: pass in n
-        tourny = Tournament(teamNames[:-1], DummyRoundGenerator(), bestofn)
+        tourny = Tournament(teamNames[:-1], round_generator, bestofn)
         
         return tourny
 
@@ -166,7 +189,7 @@ class Interface():
                     line += t2[:DISPLAY_LENGTH].ljust(DISPLAY_LENGTH)
                 else:
                     line += " " * DISPLAY_LENGTH
-                formatting = curses.A_BOLD if score is not None else 0
+                formatting = curses.A_BOLD if game.isComplete() else 0
                 self.drawMaybeHighlightedLine(selected_index, row, line, formatting)
             self.drawMaybeHighlightedLine(selected_index, len(backmap), "FINISH ROUND", curses.A_BOLD if tourny.roundCompleted() else 0)
 
