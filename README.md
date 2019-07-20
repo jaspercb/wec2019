@@ -1,2 +1,3 @@
 # wec2019
-todo
+
+`python3 src/interface.py [saved-file]`
