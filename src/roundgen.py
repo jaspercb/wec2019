@@ -34,7 +34,7 @@ class SingleEliminationGenerator(object):
         teams = trn.getTeams()
 
         self.rounds = _generateSingleElimBracket(teams)
-        self.winner = self.rounds[-1][0].getWinner
+        self.winner = self.rounds[-1][0][0].getWinner
 
 
 class DoubleEliminationGenerator(object):
