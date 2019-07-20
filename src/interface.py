@@ -193,6 +193,7 @@ class Interface():
                 formatting = curses.A_BOLD if game.isComplete() else 0
                 self.drawMaybeHighlightedLine(selected_index, row, line, formatting)
             self.drawMaybeHighlightedLine(selected_index, len(backmap), "FINISH ROUND", curses.A_BOLD if tourny.roundCompleted() else 0)
+            self.stdscr.addstr(len(backmap)+1, 0, "'s' to save, 'q' to quit")
 
         while True:
             redrawScreen()
