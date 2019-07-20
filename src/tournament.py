@@ -39,15 +39,17 @@ class Tournament(object):
             self.past_rounds.append(self.current_round)
 
         self.current_round = OrderedDict()
-        for game in self.round_generator.generateRound(self):
-            # set game scores to the correct number of unplayed matches
-            game.scores = [None] * self.num_matches
-            self.current_round[self.next_game_id] = game
-            self.next_game_id += 1
+        nextRound = self.round_generator.generateRound(self)
+        if nextRound:
+            for game in nextRound:
+                # set game scores to the correct number of unplayed matches
+                game.scores = [None] * self.num_matches
+                self.current_round[self.next_game_id] = game
+                self.next_game_id += 1
 
-        self.unplayed_games = set(
-            id_ for id_, game in self.current_round.items()
-            if not game.isBye())
+            self.unplayed_games = set(
+                id_ for id_, game in self.current_round.items()
+                if not game.isBye())
 
     def currentRound(self):
         return list(self.current_round.keys())

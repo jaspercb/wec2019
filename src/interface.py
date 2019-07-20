@@ -17,10 +17,6 @@ States:
 
 Required TODOs:
     * scrolling behavior?
-    * pick single-elim vs double-elim etc
-
-Neat TODOs:
-    * Display bracket?
 """
 
 class ExitInProgressTournament(Exception):
@@ -40,11 +36,9 @@ class Interface():
                 self.tournament.startNextRound()
                 if self.tournament.currentRound() is None:
                     break
+            # TODO: print results
         except ExitInProgressTournament:
             pass
-
-        # TODO: Print results
-
 
     def drawMaybeHighlightedLine(self, highlighted_index, y, string, formatting=0):
         if highlighted_index == y:
@@ -116,8 +110,7 @@ class Interface():
             curses.echo()
             mode = str(self.stdscr.getstr(0, len(msg), 10))[2:-1]
             curses.noecho()
-            self.stdscr.addstr(3, 0, mode)
-            if mode in ["single", "double"]:
+            if mode in ["single", "double", "roundrobin"]:
                 round_generator = roundgen.getGenerator(mode)
                 break
 
@@ -136,7 +129,6 @@ class Interface():
             except ValueError:
                 pass
 
-        # TODO: pass in n
         tourny = Tournament(teamNames[:-1], round_generator, bestofn)
 
         return tourny
@@ -149,7 +141,7 @@ class Interface():
         * ENTER to edit the game record
         * left-right arrows as a shortcut for 0-1 or 1-0
 
-        TODO: Filter games by team name
+        Neat possible feature: Filter games by team name
         """
         selected_index = 0
         tourny = self.tournament
