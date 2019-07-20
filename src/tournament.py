@@ -31,7 +31,7 @@ class Tournament(object):
             self.current_round[self.next_game_id] = game
             self.next_game_id += 1
 
-        self.unplayed_games = set(self.currentGames())
+        self.unplayed_games = set(self.currentRound())
 
     # past rounds
     def currentRound(self):
@@ -40,8 +40,8 @@ class Tournament(object):
     def getGame(self, gameid):
         if gameid in self.current_round.keys():
             return self.current_round[gameid]
-        elif gameid in self.past_games.keys():
-            return self.past_games[gameid]
+        elif gameid in self.past_rounds.keys():
+            return self.past_rounds[gameid]
         raise KeyError()
 
     # |score| is a tuple (team1_score, team2_score)
@@ -53,7 +53,7 @@ class Tournament(object):
         except KeyError:
             pass
         else:
-            self.past_games.append(gameid)
+            self.past_rounds.append(gameid)
 
     def getTeamRecord(self, string):
         self.team_records[string]

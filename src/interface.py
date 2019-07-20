@@ -1,4 +1,5 @@
 from tournament import Tournament
+from tests import DummyRoundGenerator
 from curses import wrapper
 import curses
 
@@ -50,7 +51,7 @@ def createTournament(stdscr):
         if teamNames[i] == "":
             stdscr.addstr(j+1, 1, "Input a team name or press ENTER to create tourny")
 
-    tourny = Tournament(teamNames)
+    tourny = Tournament(teamNames, DummyRoundGenerator())
     return tourny
 
 def viewTournament(stdscr):
@@ -71,31 +72,69 @@ def viewRound(stdscr, tourny):
     TODO: Filter games by team name
     """
     index = 0
-    while True:
-        games = tourny.currentGames()
-        ch = stdscr.getch()
-        if (ch == 10 and index == len(i)): # finish round
-            break
-        if (ch == curses.KEY_DOWN):
-            index += 1
-        elif (ch == curses.KEY_UP):
-            index -= 1
-        # TODO: enter to edit
-        index = max(index, 0)
-        index = min(index, len(tourny.currentGames()))
+    def drawMaybeHighlightedLine(y, string):
+        # Intent: highlight selected line
+        if index == y:
+            stdscr.standout()
 
-        # draw
-        for i, game in enumerate(games):
-            t1, t2 = game.teams()
-            score = game.score() #int, int
-            DISPLAYLENGTH = 10
-            SCORELENGTH = 6
-            stdscr.addstr(j+1, 0, t1[:DISPLAYLENGTH])
-            stdscr.addstr(j+1, 1+DISPLAYLENGTH, score)
-            stdscr.addstr(j+1, 1+DISPLAYLENGTH+SCORELENGTH, t2[:DISPLAYLENGTH])
+        stdscr.addstr(y, 0, string)
+
+        if index == y:
+            stdscr.standend()
+
+    DISPLAY_LENGTH = 10
+    SCORE_LENGTH = 7
+    def redrawScreen():
+        game_ids = tourny.currentRound()
+        for i, game_id in enumerate(game_ids):
+            game = tourny.getGame(game_id)
+            t1, t2 = game.getTeams()
+            try:
+                score = game.score # (int, int)
+            except: # TODO: this is for testing only, remove once stub exists
+                score = (1, 2)
+            line = ""
+            line += t1[:DISPLAY_LENGTH].rjust(DISPLAY_LENGTH)
+            line += "-".join(map(str, score)).rjust(SCORE_LENGTH)
+            line += t2[:DISPLAY_LENGTH].rjust(DISPLAY_LENGTH)
+            drawMaybeHighlightedLine(i, line)
         # TODO: maybe a button with "finish round"
-        stdscr.getch()
-        break
+        stdscr.addstr(i+2, 0, "FINISH ROUND")
+
+    while True:
+        redrawScreen()
+        game_ids = tourny.currentRound()
+        ch = stdscr.getch()
+        if ch == 10 and index == len(game_ids): # finish round
+            break
+
+        if ch == curses.KEY_DOWN:
+            index += 1
+        elif ch == curses.KEY_UP:
+            index -= 1
+        elif ch == curses.KEY_LEFT and index < len(game_ids):
+            tourny.setScore(game_ids[index], (1, 0))
+        elif ch == curses.KEY_RIGHT and index < len(game_ids):
+            tourny.setScore(game_ids[index], (0, 1))
+        elif ch == 10: # enter
+            while True:
+                curses.echo()
+                newscore = stdscr.getstr(index, DISPLAY_LENGTH + 1, 10) # y, x, length-of-string
+                curses.noecho()
+                try:
+                    arr = newscore.split(b" ")
+                    if len(arr) == 1:
+                        arr = newscore.split(b"-")
+                    a, b = arr
+                    tourny.setScore(game_ids[index], (int(a), int(b)))
+                    break
+                except ValueError:
+                    pass # THERE IS NO ESCAPE
+
+
+                
+        index = max(index, 0)
+        index = min(index, len(tourny.currentRound()))
 
 def main(stdscr):
     tourny = createTournament(stdscr)
