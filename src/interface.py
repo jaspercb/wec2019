@@ -107,7 +107,7 @@ class Interface():
                 teamNames[i] = teamNames[i][:-1] if teamNames[i] else ""
             else:
                 teamNames[i] += chr(ch)
-        
+
         round_generator = None
         while round_generator is None:
             msg = "Which bracket type? (double, single) "
@@ -123,9 +123,10 @@ class Interface():
 
         bestofn = None
         while bestofn is None:
-            msg = "Best-of-n (odd number): "
+            msg = "Matches per game (odd number): "
             self.stdscr.addstr(1, 0, msg)
             self.stdscr.addstr(1, len(msg), " "*3)
+
             try:
                 curses.echo()
                 bestofn = int(self.stdscr.getstr(1, len(msg), 3))
@@ -137,7 +138,7 @@ class Interface():
 
         # TODO: pass in n
         tourny = Tournament(teamNames[:-1], round_generator, bestofn)
-        
+
         return tourny
 
     def viewRound(self):
@@ -152,7 +153,7 @@ class Interface():
         """
         selected_index = 0
         tourny = self.tournament
-        
+
         SCORE_LENGTH = 7
         DISPLAY_LENGTH = max(map(len, tourny.getTeams())) + 3
 
@@ -229,29 +230,34 @@ class Interface():
                         break
                     except ValueError:
                         pass # THERE IS NO ESCAPE
-            elif ch == curses.ascii.ctrl("s"):
+            elif ch == ord("s"):
                 # save
-                if self.saveDialog():
+                if self.saveDialog(tourny):
                     return
+
+            elif ch == ord("q"):
+                # exit
+                raise ExitInProgressTournament()
 
 
             selected_index = max(selected_index, 0)
             selected_index = min(selected_index, len(backmap))
 
-    def saveDialog(self):
+    def saveDialog(self, tourny):
         self.stdscr.clear()
         filename = ""
-        while filename != "":
+        while filename == "":
             self.stdscr.addstr(0, 0, "Enter save file name:")
             curses.echo()
             filename = self.stdscr.getstr(1, 0, 20)
             curses.noecho()
-        # TODO: save to filename
+        tourny.saveToFile(filename)
+        return True
 
 def main(stdscr):
     tourny = None
     if len(sys.argv) > 1:
-        tourny = None # TODO: unpickle
+        tourny = Tournament.fromFile(sys.argv[1])
 
     interface = Interface(stdscr, tourny)
     interface.run()
