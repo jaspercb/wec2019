@@ -236,7 +236,7 @@ class Interface():
                         if len(arr) == 1:
                             arr = newscore.split(b"-")
                         a, b = arr
-                        tourny.setScore(game_ids[selected_index], (int(a), int(b)))
+                        tourny.setScore(game_ids[backmap[selected_index][0]], (int(a), int(b)))
                         break
                     except ValueError:
                         pass # THERE IS NO ESCAPE
