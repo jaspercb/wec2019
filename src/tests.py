@@ -1,5 +1,6 @@
 from game import Game
 from tournament import Tournament
+from roundgen import SingleEliminationGenerator
 
 
 class DummyRoundGenerator(object):
@@ -34,10 +35,28 @@ def test_record_past_rounds():
         and len(set(past_rounds[0]) & set(past_rounds[1])) == 0
 
 
+def test_round_completion():
+    result = True
+
+    tourney = Tournament(
+        ['a', 'b', 'c', 'd', 'e'], SingleEliminationGenerator())
+
+    # round should be 3 byes and 1 match between d and e
+
+    result = result and not tourney.roundCompleted()
+
+    tourney.setScore(1, (1, 0))
+
+    result = result and tourney.roundCompleted()
+
+    return result
+
+
 if __name__ == '__main__':
     tests = [
         test_tournament_init,
         test_record_past_rounds,
+        test_round_completion,
     ]
 
     for test in tests:

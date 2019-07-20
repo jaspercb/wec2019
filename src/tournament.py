@@ -31,14 +31,18 @@ class Tournament(object):
             self.current_round[self.next_game_id] = game
             self.next_game_id += 1
 
-        self.unplayed_games = set(self.currentRound())
+        self.unplayed_games = set(
+            id_ for id_, game in self.current_round.items()
+            if not game.isBye())
 
-    # past rounds
     def currentRound(self):
         return list(self.current_round.keys())
 
     def pastRounds(self):
         return [list(round_.keys()) for round_ in self.past_rounds]
+
+    def roundCompleted(self):
+        return len(self.unplayed_games) == 0
 
     def getGame(self, gameid):
         if gameid in self.current_round.keys():

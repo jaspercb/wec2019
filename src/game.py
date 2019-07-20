@@ -20,7 +20,7 @@ class Game(object):
         return self.teams[0] if team != self.teams[0] else self.teams[1]
 
     def isBye(self):
-        return self.teams[1] == None
+        return self.teams[1] is None
 
     def isNull(self):
         return self.teams[0] == None and self.teams[1] == None
